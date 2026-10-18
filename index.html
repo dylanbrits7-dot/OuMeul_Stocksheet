@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6b57">
+<title>Ou Meul Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="authScreen" class="authwrap" hidden>
+  <div class="authcard">
+    <h1>Ou Meul <span>Stock</span></h1>
+    <div class="where">Pinelands</div>
+    <div id="authMsg" class="note info" hidden></div>
+
+    <form id="loginForm" autocomplete="on">
+      <h2>Sign in</h2>
+      <div class="field"><label for="liEmail">Email</label><input id="liEmail" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="liPass">Password</label><input id="liPass" type="password" autocomplete="current-password" required></div>
+      <button class="btn primary" type="submit">Sign in</button>
+      <div class="links">
+        <button class="btn ghost" type="button" id="toSignup">Create an account</button>
+        <button class="btn ghost" type="button" id="toReset">Forgot password</button>
+      </div>
+    </form>
+
+    <form id="signupForm" hidden autocomplete="on">
+      <h2>Create an account</h2>
+      <p class="muted" style="margin:0;font-size:.9rem">After you sign up, the owner has to approve you and choose what you can see before you can use the app.</p>
+      <div class="field"><label for="suName">Your name</label><input id="suName" autocomplete="name" required></div>
+      <div class="field"><label for="suEmail">Email</label><input id="suEmail" type="email" autocomplete="username" required></div>
+      <div class="field"><label for="suPass">Password (at least 8 characters)</label><input id="suPass" type="password" autocomplete="new-password" minlength="8" required></div>
+      <button class="btn primary" type="submit">Create account</button>
+      <div class="links"><button class="btn ghost" type="button" data-back>Back to sign in</button></div>
+    </form>
+
+    <form id="resetForm" hidden>
+      <h2>Reset your password</h2>
+      <p class="muted" style="margin:0;font-size:.9rem">We'll email you a link to choose a new password.</p>
+      <div class="field"><label for="rsEmail">Email</label><input id="rsEmail" type="email" autocomplete="username" required></div>
+      <button class="btn primary" type="submit">Send reset link</button>
+      <div class="links"><button class="btn ghost" type="button" data-back>Back to sign in</button></div>
+    </form>
+
+    <div id="pendingBox" hidden style="display:grid;gap:12px">
+      <h2 id="pendingTitle">Waiting for approval</h2>
+      <p class="muted" id="pendingText" style="margin:0">Your account is created. The owner needs to approve it and choose what you can see. This page updates by itself once that's done.</p>
+      <div class="links"><button class="btn" type="button" id="pendingOut">Sign out</button></div>
+    </div>
+
+    <div id="setupBox" hidden style="display:grid;gap:10px">
+      <h2>Setup needed</h2>
+      <p style="margin:0">This copy of the app isn't connected to Firebase yet. Open <code>firebase-config.js</code>, paste in the web app settings from the Firebase console, and publish it again.</p>
+      <p class="muted" style="margin:0;font-size:.9rem">Step by step: <code>docs/SETUP-GUIDE.md</code>.</p>
+    </div>
+  </div>
+</div>
+
+<div id="appRoot" hidden>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Ou Meul <span>Stock</span></h1>
+      <div class="where">Pinelands</div>
+      <div class="who"><span id="whoName"></span><button class="btn ghost" id="signOutBtn" type="button">Sign out</button></div>
+    </div>
+    <div class="sessionbar">
+      <select id="sessionSel" aria-label="Stocktake"><option>Loading…</option></select>
+      <span id="sessionPill" class="pill closed">—</span>
+      <button class="btn" id="newSessionBtn">New stocktake</button>
+      <button class="btn danger" id="delSessionBtn" hidden>Delete draft</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="count" aria-selected="true">Count</button>
+      <button role="tab" data-tab="variance" aria-selected="false">Variance</button>
+      <button role="tab" data-tab="order" aria-selected="false">Order</button>
+      <button role="tab" data-tab="waste" aria-selected="false">Waste</button>
+      <button role="tab" data-tab="daily" aria-selected="false">Daily</button>
+      <button role="tab" data-tab="staff" aria-selected="false">Staff</button>
+      <button role="tab" data-tab="sheets" aria-selected="false">Count sheets</button>
+      <button role="tab" data-tab="invoices" aria-selected="false">Invoices</button>
+      <button role="tab" data-tab="items" aria-selected="false">Items</button>
+      <button role="tab" data-tab="team" aria-selected="false" hidden>Team</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="globalNote" hidden></div>
+
+  <!-- NEW SESSION -->
+  <div class="panel" id="newSessionPanel" hidden style="margin-top:16px">
+    <h3>Start a new stocktake</h3>
+    <p class="muted" style="margin:0">Import a fresh GAAP stock-on-hand export first (Items tab), so the variance compares against today's figures.</p>
+    <div class="field" style="max-width:360px"><label for="newKind">What are you counting?</label>
+      <select id="newKind"><option value="full">Full stocktake (every Monday)</option><option value="monthend">Month-end stocktake</option><option value="lists">One or more stock lists</option></select></div>
+    <div id="newListsWrap" hidden>
+      <p class="muted" style="margin:0 0 6px;font-size:.85rem">Tick every list being counted in this stocktake. People counting at the same time (like Nwabisa and Bongani) share one stocktake, each on their own list.</p>
+      <div class="chips" id="newLists" aria-label="Stock lists"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1 1 240px"><label for="newSessionName">Name</label><input id="newSessionName"></div>
+      <button class="btn primary" id="createSessionBtn">Start</button>
+      <button class="btn ghost" id="cancelSessionBtn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- COUNT -->
+  <section class="view" id="view-count">
+    <p class="scopeline" id="scopeLine" hidden></p>
+    <div class="chips" id="areaChips" aria-label="Count location"></div>
+    <p class="muted" id="placeHint" style="margin:-6px 0 0;font-size:.85rem"></p>
+    <div class="progress">
+      <div class="row" style="justify-content:space-between"><span class="lbl" id="progLabel">Counted</span><span class="num" id="progText">0 / 0</span></div>
+      <div class="bar"><i id="progBar"></i></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1 1 220px"><input id="search" type="search" placeholder="Search item or code" aria-label="Search items"></div>
+      <label class="check"><input type="checkbox" id="hideCounted"> Hide counted</label>
+      <label class="check"><input type="checkbox" id="showGaap"> Show GAAP qty</label>
+    </div>
+    <div id="closedNote" class="note warn" hidden>This stocktake is final. Counts are locked; start a new stocktake to count again.</div>
+    <div class="row countTools" id="countTools">
+      <span class="muted" style="font-size:.85rem;flex:1 1 220px">Counts save as you type and stay a <b>draft</b> until you finalise on the Variance tab.</span>
+      <button class="btn" id="saveDraftBtn">Save draft</button>
+      <button class="btn" id="showDraftsBtn" aria-expanded="false">Drafts <span class="num" id="draftCount">0</span></button>
+      <button class="btn danger" id="clearAllBtn">Clear all counts</button>
+    </div>
+    <div class="note warn" id="clearConfirm" hidden>
+      This wipes every count in <b id="clearName"></b>, in all locations. Save a draft first if you might want them back.
+      <div class="row" style="margin-top:8px"><button class="btn danger" id="clearYes">Yes, clear everything</button><button class="btn ghost" id="clearNo">Cancel</button></div>
+    </div>
+    <div class="panel" id="draftSavePanel" hidden>
+      <div class="row">
+        <div class="field" style="flex:1 1 240px"><label for="draftName">Draft name</label><input id="draftName"></div>
+        <button class="btn primary" id="draftSaveYes" style="align-self:end">Save draft</button>
+        <button class="btn ghost" id="draftSaveNo" style="align-self:end">Cancel</button>
+      </div>
+      <p class="muted" style="margin:0;font-size:.85rem">Keeps a copy of the counts as they are now. You can carry on counting, clear the sheet, or restore this copy later. It never changes GAAP and is not a final count.</p>
+    </div>
+    <div class="panel" id="draftsPanel" hidden>
+      <h3>Saved drafts</h3>
+      <div id="draftList"></div>
+    </div>
+    <div class="countlist" id="countList"><div class="empty">Loading items…</div></div>
+  </section>
+
+  <!-- VARIANCE -->
+  <section class="view" id="view-variance" hidden>
+    <div class="tiles" id="varTiles"></div>
+    <div class="row">
+      <div class="field"><label for="varArea">Area</label><select id="varArea"></select></div>
+      <div class="field"><label for="varFilter">Show</label>
+        <select id="varFilter">
+          <option value="var">Items with a variance</option>
+          <option value="recount">Needs a recount</option>
+          <option value="all">All counted items</option>
+          <option value="uncounted">Not yet counted</option>
+        </select></div>
+      <div class="field" style="max-width:170px"><label for="recountR">Recount if over (R)</label><input id="recountR" type="number" min="0" step="10" inputmode="numeric"></div>
+      <div class="row" style="margin-left:auto;align-self:end">
+        <button class="btn" id="dlVarCsv">Download Excel</button>
+        <button class="btn primary" id="closeSessionBtn">Finalise &amp; lock count</button>
+      </div>
+    </div>
+    <div id="closeConfirm" class="note warn" hidden>
+      <span id="closeRecountWarn"></span>Finalising turns this draft into the final count: every count is locked and today's GAAP quantities and costs are frozen into this report. <button class="btn danger" id="closeYes">Yes, finalise it</button> <button class="btn ghost" id="closeNo">Keep as draft</button>
+    </div>
+    <div class="tablewrap"><table class="vartable">
+      <thead><tr><th>Item</th><th>Area</th><th class="n">GAAP</th><th class="n">Counted</th><th class="n">Variance</th><th class="n">Waste logged</th><th class="n">Unit cost</th><th class="n">Value var.</th><th class="n">Unexplained</th></tr></thead>
+      <tbody id="varBody"></tbody>
+    </table></div>
+    <p class="muted" style="margin:0;font-size:.85rem">Variance = counted − GAAP. Red is stock missing; blue is more on the shelf than GAAP shows (unprocessed deliveries, wrong unit, mis-scanned sales). <b>Waste logged</b> is what staff recorded on the Waste tab since the last final count. <b>Unexplained</b> is the shortage nobody accounted for. Chase the unexplained losses, and recount the flagged lines before you finalise.</p>
+  </section>
+
+  <!-- ORDER -->
+  <section class="view" id="view-order" hidden>
+    <div class="chips" id="ordMode" aria-label="Order view">
+      <button class="chip" data-m="sheets" aria-pressed="true">Weekly order sheets</button>
+      <button class="chip" data-m="levels" aria-pressed="false">From stock levels</button>
+    </div>
+
+    <div id="ordSheetsMode" class="osmode">
+      <div class="row">
+        <div class="chips" id="osPick" aria-label="Order sheet" style="flex:1 1 220px"></div>
+        <button class="btn ghost" id="osNewBtn">+ New order sheet</button>
+      </div>
+      <div class="panel" id="osNewPanel" hidden>
+        <h3>New order sheet</h3>
+        <div class="row">
+          <div class="field" style="flex:1 1 220px"><label for="osNewName">Supplier</label><input id="osNewName" data-pick="supplier" autocomplete="off" placeholder="Type or pick a supplier"></div>
+          <button class="btn primary" id="osNewYes" style="align-self:end">Create</button>
+          <button class="btn ghost" id="osNewNo" style="align-self:end">Cancel</button>
+        </div>
+      </div>
+      <div id="osBody" class="osmode"></div>
+    </div>
+
+    <div id="ordLevelsMode" class="osmode" hidden>
+    <div class="tiles" id="ordTiles"></div>
+    <div class="row">
+      <div class="field" style="max-width:240px"><label for="ordSupplier">Supplier</label><select id="ordSupplier"></select></div>
+      <label class="check" style="align-self:end"><input type="checkbox" id="ordUncounted"> Treat items not counted as 0 on hand</label>
+      <button class="btn" id="ordLevelsBtn" style="margin-left:auto;align-self:end" aria-expanded="false">Set min &amp; target levels</button>
+    </div>
+    <p class="muted" style="margin:0;font-size:.85rem">An item goes on the order when what's on hand (from this stocktake's count) is at or below its <b>minimum</b>. The order quantity tops it up to the <b>target</b>. Quantities are in the item's counting unit; change any line before you copy it.</p>
+
+    <div class="panel" id="levelsPanel" hidden>
+      <div class="row" style="justify-content:space-between"><h3>Min &amp; target levels</h3><span class="muted" id="lvlCount" style="font-size:.85rem"></span></div>
+      <div class="row">
+        <div class="field" style="flex:1 1 200px"><input id="lvlSearch" type="search" placeholder="Search item or code" aria-label="Search items"></div>
+        <div class="field" style="max-width:220px"><select id="lvlLoc" aria-label="Location"></select></div>
+        <label class="check"><input type="checkbox" id="lvlUnset"> Only items without levels</label>
+      </div>
+      <div class="tablewrap" style="max-height:60vh;overflow:auto"><table class="lvl">
+        <thead><tr><th>Item</th><th>Unit</th><th class="n">GAAP</th><th class="n">Counted</th><th>Min</th><th>Target</th><th>Supplier</th></tr></thead>
+        <tbody id="lvlBody"></tbody>
+      </table></div>
+      <p class="muted" style="margin:0;font-size:.85rem">Changes save as you leave each box. Tip: set the minimum to what you use before the next delivery arrives, and the target to what fits on the shelf.</p>
+    </div>
+
+    <div id="ordGroups"></div>
+    </div>
+  </section>
+
+  <!-- WASTE -->
+  <section class="view" id="view-waste" hidden>
+    <div class="panel" id="wasteForm">
+      <h3>Log waste</h3>
+      <div class="grid2">
+        <div class="field"><label for="wItem">Item</label><input id="wItem" data-pick type="search" enterkeyhint="search" placeholder="Type the item name or code" autocomplete="off" autocorrect="off" spellcheck="false"></div>
+        <div class="field"><label for="wQty">Quantity <span id="wUnit" class="muted"></span></label><input id="wQty" type="number" step="any" min="0" inputmode="decimal"></div>
+      </div>
+      <div class="field"><span class="lbl">Reason</span><div class="chips" id="wReasons" style="flex-wrap:wrap"></div></div>
+      <div class="field"><label for="wNote">Note (optional)</label><input id="wNote" placeholder="e.g. tray dropped, past use-by"></div>
+      <div class="row"><button class="btn primary" id="wSave">Log waste</button><span class="muted" id="wValue" style="font-size:.9rem"></span></div>
+    </div>
+    <div class="row">
+      <div class="field" style="max-width:260px"><label for="wPeriod">Period</label>
+        <select id="wPeriod"><option value="stock">Since the last final stocktake</option><option value="today">Today</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="all">Everything</option></select></div>
+      <label class="check" style="align-self:end"><input type="checkbox" id="wInGaap"> We also book waste in GAAP</label>
+      <label class="check" style="align-self:end"><input type="checkbox" id="wOnlyUnposted"> Only entries not yet in GAAP</label>
+      <button class="btn" id="wCsv" style="margin-left:auto;align-self:end">Download Excel</button>
+    </div>
+    <div class="tiles" id="wTiles"></div>
+    <p class="note info gaapwaste" id="wGaap" hidden></p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>When</th><th>Item</th><th class="n">Qty</th><th>Reason</th><th class="n">Value</th><th>Logged by</th><th id="wPostedTh">In GAAP</th><th></th></tr></thead>
+      <tbody id="wBody"></tbody>
+    </table></div>
+    <p class="muted" style="margin:0;font-size:.85rem" id="wFoot"></p>
+  </section>
+
+  <!-- SHEETS -->
+  <section class="view" id="view-sheets" hidden>
+    <div class="panel">
+      <h3>Printable count sheets</h3>
+      <p class="muted" style="margin:0">Choose how to group the pages, pick which ones you need, then download, open and print. Each group starts on a new page with a blank count column and a sign-off line.</p>
+      <div class="field" style="max-width:280px"><label for="sheetGroup">Group pages by</label>
+        <select id="sheetGroup"><option value="loc">Location (walk route)</option><option value="area">Category</option><option value="sheet">One list in GAAP sheet order</option></select></div>
+      <div class="chips" id="sheetAreas" style="flex-wrap:wrap"></div>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="sheetGaap"> Include GAAP qty (off = blind count)</label>
+        <label class="check"><input type="checkbox" id="sheetCounted"> Fill in counts captured so far</label>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="dlSheetHtml">Download print sheet</button>
+        <button class="btn" id="dlSheetCsv">Download as Excel</button>
+      </div>
+      <div id="sheetMsg" class="muted" style="font-size:.9rem"></div>
+    </div>
+    <div class="panel">
+      <h3>How a count day runs</h3>
+      <ol style="margin:0;padding-left:20px;display:grid;gap:6px">
+        <li>Before opening or after close, export stock-on-hand from GAAP and import it on the Items tab.</li>
+        <li>Press <b>New stocktake</b>. Give each counter a location (kitchen, store room shelves, store room fridges, shop, front counter, bar). They count on their phone, or on a printed location sheet and capture later.</li>
+        <li>If something is stored in more than one place, count it in each place. The app adds the locations into one total for GAAP.</li>
+        <li>Keep <b>Show GAAP qty</b> off while counting, so people count what is there rather than what they expect.</li>
+        <li>Check the Variance tab. Recount anything with a large value variance before you trust it.</li>
+        <li>Need to stop half-way or start again? Press <b>Save draft</b> to keep a copy, and <b>Clear all counts</b> to empty the sheet. Restore any draft from the <b>Drafts</b> list.</li>
+        <li>Finalise &amp; lock, download the Excel file, then post the adjustments in GAAP.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- INVOICES -->
+  <section class="view" id="view-invoices" hidden>
+    <div class="panel" id="capPanel">
+      <h3>Capture an invoice</h3>
+      <p class="muted" style="margin:0">Take a photo of each page, lying flat with good light, and save it. Photos are kept with the invoice so you can look at them later. Enter the new prices on the Items tab.</p>
+      <div class="row">
+        <span class="btn primary filebtn pick"><span id="camLbl">📷 Take photo</span><input type="file" id="invPhoto" accept="image/*" capture="environment" aria-label="Take a photo of the invoice"></span>
+        <span class="btn filebtn pick"><span id="galLbl">🖼 Choose from gallery</span><input type="file" id="invPhotoMore" accept="image/*" multiple aria-label="Choose invoice photos from your gallery"></span>
+      </div>
+      <p class="muted" style="margin:0;font-size:.85rem">If the camera doesn't open, take the photo with your phone's normal camera, then tap <b>Choose from gallery</b> and pick it. Add each page of a multi-page invoice before saving.</p>
+      <div class="thumbs" id="invThumbs"></div>
+      <div class="row" id="invActions" hidden>
+        <button class="btn primary" id="invRead">Read invoice</button>
+        <button class="btn" id="invPhotoOnly">Save photo only</button>
+        <button class="btn ghost" id="invDiscard">Discard</button>
+      </div>
+      <div id="invStatus"></div>
+    </div>
+
+    <div class="panel" id="revPanel" hidden>
+      <div class="row" style="justify-content:space-between"><h3>Check the prices</h3><span class="muted" id="revSummary" style="font-size:.9rem"></span></div>
+      <div class="grid2">
+        <div class="field"><label for="rvSupplier">Supplier</label><input id="rvSupplier"></div>
+        <div class="field"><label for="rvNumber">Invoice number</label><input id="rvNumber"></div>
+        <div class="field"><label for="rvDate">Date</label><input id="rvDate" type="date"></div>
+        <div class="field"><label for="rvTotal">Total excl. VAT (R)</label><input id="rvTotal" type="number" step="any" inputmode="decimal"></div>
+      </div>
+      <div id="revWarn"></div>
+      <div class="tablewrap"><table class="rev">
+        <thead><tr><th></th><th>Invoice line</th><th class="n">Qty</th><th class="n">Price</th><th>Stock item</th><th class="n">New cost</th><th class="n">Now</th><th>Change</th></tr></thead>
+        <tbody id="revBody"></tbody>
+      </table></div>
+      <p class="muted" style="margin:0;font-size:.85rem">Ticked lines update that item's cost. Change the stock item or the cost if the match is wrong. Lines with no stock item (deposits, cleaning stock, delivery) are saved on the invoice only.</p>
+      <div class="row">
+        <button class="btn primary" id="revSave">Save invoice &amp; update prices</button>
+        <button class="btn" id="revSaveOnly">Save invoice, no price changes</button>
+        <button class="btn ghost" id="revCancel">Cancel</button>
+      </div>
+    </div>
+
+    <div class="row" style="justify-content:space-between"><h3 id="invCount">Saved invoices</h3></div>
+    <div id="invList" class="invlist"><div class="empty">No invoices captured yet.</div></div>
+    <div class="panel" id="invDetail" hidden></div>
+  </section>
+
+  <!-- ITEMS -->
+  <section class="view" id="view-daily" hidden>
+    <div class="row" style="justify-content:space-between;align-items:flex-end">
+      <div style="min-width:0">
+        <h2 style="font-size:1.5rem;text-transform:uppercase;letter-spacing:.04em">Daily trading</h2>
+        <p class="muted" style="margin:2px 0 0;font-size:.9rem">From the GAAP Management Overview Report, one report per trading day.</p>
+      </div>
+      <button class="btn" id="dCsv">Download Excel</button>
+    </div>
+    <div class="chips" id="dDays" role="group" aria-label="Trading day"></div>
+    <div id="dEmpty" class="panel" hidden>
+      <h3>No daily reports yet</h3>
+      <p class="muted" style="margin:0">Daily reports are loaded by the owner each month from the Team tab (Import data).</p>
+    </div>
+    <div id="dMain" hidden style="display:grid;gap:16px">
+      <div style="display:grid;gap:8px">
+        <h3 style="font-size:1.25rem" id="dPeriodTitle">All loaded days</h3>
+        <div class="tiles" id="dPeriod"></div>
+      </div>
+      <h3 style="font-size:1.25rem" id="dDayTitle">Selected day</h3>
+      <div class="tiles" id="dTiles"></div>
+      <div style="display:grid;gap:8px">
+        <h3 style="font-size:1.25rem">Needs a look</h3>
+        <div class="flaglist" id="dFlags"></div>
+      </div>
+      <div style="display:grid;gap:8px">
+        <h3 style="font-size:1.25rem">Day by day</h3>
+        <div class="tablewrap"><table class="dcmp"><thead id="dCmpHead"></thead><tbody id="dCmpBody"></tbody></table></div>
+        <p class="muted" style="margin:0;font-size:.82rem" id="dGap"></p>
+      </div>
+      <div style="display:grid;gap:8px">
+        <h3 style="font-size:1.25rem" id="dDetailTitle">Full report</h3>
+        <div class="ddetail" id="dDetail"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-staff" hidden>
+    <div class="shead">
+      <div style="min-width:0">
+        <h2 style="font-size:1.5rem;text-transform:uppercase;letter-spacing:.04em">Staff hours</h2>
+        <p class="muted" style="margin:2px 0 0;font-size:.9rem">Hours per day from the GAAP Detailed Log Report, split by pay rate, with the value at that rate.</p>
+      </div>
+      <div class="row">
+        <div class="field"><select id="sPeriod" aria-label="Period"></select></div>
+        <button class="btn" id="sCsv">Download Excel</button>
+      </div>
+    </div>
+    <div style="display:grid;gap:8px">
+      <div class="tablewrap"><table class="spay"><thead id="sRepHead"></thead><tbody id="sRepBody"></tbody></table></div>
+      <p class="muted" style="margin:0;font-size:.82rem" id="sRepNote"></p>
+    </div>
+    <div hidden>
+    <div class="tiles" id="sTiles"></div>
+    <div style="display:grid;gap:8px" id="sPayWrap">
+      <h3 style="font-size:1.25rem">Weekly pay sheet</h3>
+      <p class="muted" style="margin:0;font-size:.85rem" id="sPayNote"></p>
+      <div id="sPay" style="display:grid;gap:14px"></div>
+    </div>
+    <div style="display:grid;gap:8px">
+      <h3 style="font-size:1.25rem">Needs a look</h3>
+      <div class="flaglist" id="sFlags"></div>
+    </div>
+    <div style="display:grid;gap:8px">
+      <h3 style="font-size:1.25rem">Day by day</h3>
+      <div class="tablewrap"><table><thead><tr><th>Day</th><th>Hours from</th><th class="n">People</th><th class="n">Hours</th><th class="n">GAAP role hours</th><th class="n">Labour cost</th><th class="n">Sales excl. VAT</th><th class="n">Labour %</th><th class="n">Sales per hour</th></tr></thead><tbody id="sDayBody"></tbody></table></div>
+      <p class="muted" style="margin:0;font-size:.82rem" id="sDayNote"></p>
+    </div>
+    <div style="display:grid;gap:8px" id="sGridWrap">
+      <h3 style="font-size:1.25rem">Hours per person</h3>
+      <div class="tablewrap"><table class="dcmp sgrid"><thead id="sGridHead"></thead><tbody id="sGridBody"></tbody></table></div>
+    </div>
+    </div>
+    <details class="sset"><summary>Pay rates &amp; people</summary><div style="display:grid;gap:16px;padding-top:12px">
+    <div class="panel">
+      <h3>Pay rates</h3>
+      <p class="muted" style="margin:0;font-size:.9rem">The standard rate applies to all hourly staff without their own rate or a role rate. People set to Monthly salary in the People list (managers, Enock) have their hours tracked but are left out of hourly pay and labour cost. Sundays and public holidays are paid at the standard hours × the multiplier. Rand per hour, before tips.</p>
+      <div class="grid2">
+        <div class="field"><label for="sBaseRate">Standard rate (R/hour)</label><input id="sBaseRate" type="number" step="any" min="0" inputmode="decimal"></div>
+        <div class="field"><label for="sSunX">Sunday &amp; public holiday ×</label><input id="sSunX" type="number" step="any" min="1" inputmode="decimal"></div>
+      </div>
+      <div class="field"><label for="sHols">Public holidays (YYYY-MM-DD, comma separated)</label><textarea id="sHols" rows="3"></textarea></div>
+      <h3 style="font-size:1.05rem;margin-top:4px">Role rates <span class="muted" style="font-weight:400;font-size:.85rem">(optional, leave blank to use the standard rate)</span></h3>
+      <div class="grid2" id="sRoleRates"></div>
+      <div class="row"><button class="btn primary" id="sSaveRates">Save pay rates</button></div>
+    </div>
+    <div class="panel">
+      <h3 id="sPplTitle">People</h3>
+      <div class="tablewrap sppl"><table><thead><tr><th>Name</th><th>Role</th><th>Pay</th><th class="n">Rate (R/hour)</th><th class="n">Days</th><th class="n">Hours</th><th class="n">Labour cost</th><th></th></tr></thead><tbody id="sPplBody"></tbody></table></div>
+      <div class="grid2" id="sAddWrap">
+        <div class="field"><label for="sNewName">Name</label><input id="sNewName" autocomplete="off"></div>
+        <div class="field"><label for="sNewRole">Role</label><select id="sNewRole"></select></div>
+        <div class="field"><label for="sNewRate">Rate (R/hour)</label><input id="sNewRate" type="number" step="any" min="0" inputmode="decimal"></div>
+      </div>
+      <div class="row"><button class="btn" id="sAdd">Add person</button></div>
+    </div>
+    </div></details>
+  </section>
+
+  <section class="view" id="view-items" hidden>
+    <div class="panel">
+      <h3>Import from GAAP</h3>
+      <p class="muted" style="margin:0">Export your stock-on-hand report from GAAP Legacy as Excel or CSV, then choose the file or paste the rows. Columns are matched by header: code, description, category/area, unit, quantity on hand, cost. Items with a matching code are updated, new codes are added.</p>
+      <div class="grid2">
+        <div class="field"><label for="impFile">File (.csv or .xlsx)</label><input type="file" id="impFile" accept=".csv,.txt,.xlsx,.xls"></div>
+        <div class="field"><label for="impArea">Area if the file has none</label><input id="impArea" data-pick="area" autocomplete="off" placeholder="e.g. Retail Shelves"></div>
+      </div>
+      <div class="field"><label for="impText">Or paste rows (with a header row)</label><textarea id="impText" placeholder="Code,Description,Category,Unit,On Hand,Cost&#10;RT001,Ou Meul Rusks Buttermilk 500g,Retail Shelves,each,24,38.50"></textarea></div>
+      <div class="row"><button class="btn" id="previewImp">Preview</button><button class="btn primary" id="runImp" disabled>Import</button></div>
+      <div id="impMsg"></div>
+      <div class="tablewrap" id="impPreviewWrap" hidden><table><thead><tr><th>Code</th><th>Item</th><th>Area</th><th>Unit</th><th class="n">GAAP qty</th><th class="n">Cost</th></tr></thead><tbody id="impPreview"></tbody></table></div>
+    </div>
+
+    <div class="panel" id="itemFormPanel">
+      <h3 id="itemFormTitle">Add an item</h3>
+      <div class="grid2">
+        <div class="field"><label for="fCode">Code</label><input id="fCode"></div>
+        <div class="field"><label for="fName">Item</label><input id="fName"></div>
+        <div class="field"><label for="fArea">Area</label><input id="fArea" data-pick="area" autocomplete="off"></div>
+        <div class="field"><label for="fLoc">Location</label><select id="fLoc"></select></div>
+        <div class="field"><label for="fUnit">Unit</label><input id="fUnit" placeholder="each, kg, bottle"></div>
+        <div class="field"><label for="fGaap">GAAP qty</label><input id="fGaap" type="number" step="any" inputmode="decimal"></div>
+        <div class="field"><label for="fCost">Unit cost (R)</label><input id="fCost" type="number" step="any" inputmode="decimal"></div>
+        <div class="field"><label for="fSupplier">Supplier</label><input id="fSupplier" data-pick="supplier" autocomplete="off"></div>
+        <div class="field"><label for="fMin">Minimum (reorder at)</label><input id="fMin" type="number" step="any" min="0" inputmode="decimal"></div>
+        <div class="field"><label for="fPar">Target (order up to)</label><input id="fPar" type="number" step="any" min="0" inputmode="decimal"></div>
+      </div>
+      <div class="field"><label>On stock lists <span class="muted" style="font-weight:400">(every item is on the Full stocktake)</span></label><div class="chips" id="fLists"></div></div>
+      <div class="row"><button class="btn primary" id="saveItem">Add item</button><button class="btn ghost" id="cancelEdit" hidden>Cancel</button><button class="btn danger" id="deleteItem" hidden>Delete</button></div>
+    </div>
+
+    <div class="row" style="justify-content:space-between">
+      <h3 id="itemCount">Items</h3>
+      <div class="row">
+        <div class="field"><select id="itemListFilter" aria-label="Show items on list"><option value="all">All items</option></select></div>
+        <button class="btn danger" id="removeExamples" hidden>Remove example items</button>
+      </div>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Code</th><th>Item</th><th>Lists</th><th>Area</th><th>Location</th><th>Unit</th><th class="n">GAAP qty</th><th class="n">Cost</th><th>Supplier</th><th class="n">Min</th><th class="n">Target</th></tr></thead>
+      <tbody id="itemBody"></tbody>
+    </table></div>
+  </section>
+  <!-- TEAM (owner only) -->
+  <section class="view team" id="view-team" hidden>
+    <div class="shead">
+      <div style="min-width:0">
+        <h2 style="font-size:1.5rem;text-transform:uppercase;letter-spacing:.04em">Team &amp; data</h2>
+        <p class="muted" style="margin:2px 0 0;font-size:.9rem">Choose who can sign in and which tabs each person sees. Backups and imports are at the bottom.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>People</h3>
+      <p class="muted" style="margin:0;font-size:.9rem">New people create their own account on the sign-in page. They show up here highlighted, with no access. Tick <b>Approved</b> and the tabs they need. Changes save straight away and apply the next time that person opens the app.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Person</th><th>Quick set</th><th>Tabs they can use</th><th>View only</th><th>Approved</th><th></th></tr></thead>
+        <tbody id="teamBody"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
+      </table></div>
+      <p class="muted" style="margin:0;font-size:.82rem">Owners always see everything. Removing someone stops their access; their sign-in stays in Firebase and they can ask to be approved again.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Back up everything</h3>
+      <p class="muted" style="margin:0;font-size:.9rem">Downloads one file with the stock items, lists, stocktakes, waste, orders, staff and daily reports. Invoice photos are not included. Save it in the <b>10_Backups</b> folder.</p>
+      <div class="row"><button class="btn primary" id="tmExport">Download backup</button><span class="muted" id="tmExportMsg"></span></div>
+    </div>
+
+    <div class="panel">
+      <h3>Import data</h3>
+      <p class="muted" style="margin:0;font-size:.9rem">Load a backup, or a monthly file prepared for the app (daily reports, staff hours, item prices). Records with the same id are updated. Nothing is ever deleted.</p>
+      <div class="grid2">
+        <div class="field"><label for="tmFile">JSON file</label><input type="file" id="tmFile" accept=".json,application/json"></div>
+        <div class="field"><label for="tmColl">Collection (only if the file is a plain list)</label>
+          <select id="tmColl"><option value="">— choose —</option><option>daily</option><option>shifts</option><option>staff</option><option>items</option><option>lists</option><option>orderSheets</option><option>orderLog</option><option>waste</option><option>sessions</option><option>invoices</option></select></div>
+      </div>
+      <label class="check"><input type="checkbox" id="tmMerge" checked> Keep fields that aren't in the file (untick to replace whole records)</label>
+      <div id="tmImpMsg"></div>
+      <div class="row"><button class="btn" id="tmPreview" disabled>Check file</button><button class="btn primary" id="tmRun" disabled>Import</button></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="js/app.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/backend.js"></script>
+</body>
+</html>

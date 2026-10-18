@@ -1,0 +1,72 @@
+rules_version = '2';
+
+// Ou Meul Stock: who may read and write what.
+//
+// Every person has a document users/{their uid}. It says whether they are approved, which tabs they may use,
+// and whether they are view-only. Only the owner (role == 'owner') can change those documents.
+// A new person can create their own users document, but only as an unapproved staff member with no tabs.
+//
+// The first owner is set once by hand in the Firebase console (see docs/SETUP-GUIDE.md).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()   { return request.auth != null; }
+    function meDoc()      { return get(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function hasMe()      { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function isOwner()    { return hasMe() && meDoc().data.role == 'owner'; }
+    function approved()   { return isOwner() || (hasMe() && meDoc().data.approved == true); }
+    function writable()   { return isOwner() || (approved() && meDoc().data.get('readOnly', false) == false); }
+    function hasTab(t)    { return isOwner() || (approved() && t in meDoc().data.tabs); }
+    function hasAny(ts)   { return isOwner() || (approved() && meDoc().data.tabs.hasAny(ts)); }
+    function canWriteTab(t)   { return writable() && hasTab(t); }
+    function canWriteAny(ts)  { return writable() && hasAny(ts); }
+
+    // ---- people ----
+    match /users/{uid} {
+      allow read:   if signedIn() && (request.auth.uid == uid || isOwner());
+      allow create: if signedIn() && request.auth.uid == uid
+                    && request.resource.data.keys().hasOnly(['name','email','role','approved','tabs','readOnly','createdAt'])
+                    && request.resource.data.role == 'staff'
+                    && request.resource.data.approved == false
+                    && request.resource.data.tabs.size() == 0;
+      allow update, delete: if isOwner();
+    }
+    // Names only, so other people's names can be shown next to waste entries. Nothing sensitive here.
+    match /profiles/{uid} {
+      allow read:   if approved();
+      allow create, update: if signedIn() && request.auth.uid == uid && approved()
+                    && request.resource.data.keys().hasOnly(['name']);
+      allow delete: if isOwner();
+    }
+
+    // ---- shared by everyone who is approved (reading); writing needs the matching tab ----
+    match /items/{id}    { allow read: if approved(); allow write: if canWriteAny(['items','invoices']); }
+    match /lists/{id}    { allow read: if approved(); allow write: if canWriteTab('items'); }
+    match /sessions/{id} {
+      allow read:  if approved();
+      allow write: if canWriteAny(['count','variance']);
+      match /drafts/{d} { allow read: if approved(); allow write: if canWriteAny(['count','variance']); }
+    }
+    match /waste/{id}    { allow read: if approved(); allow write: if canWriteTab('waste'); }
+
+    // settings/main: counting and waste options. settings/pay: wages, so only the Staff tab can see it.
+    match /settings/main { allow read: if approved(); allow write: if canWriteAny(['variance','waste','count']); }
+    match /settings/pay  { allow read: if hasTab('staff'); allow write: if canWriteTab('staff'); }
+
+    // ---- money and staff: only people with that tab ----
+    match /daily/{id}    { allow read: if hasAny(['daily','staff','waste']); allow write: if canWriteTab('daily'); }
+    match /staff/{id}    { allow read: if hasTab('staff'); allow write: if canWriteTab('staff'); }
+    match /shifts/{id}   { allow read: if hasTab('staff'); allow write: if canWriteTab('staff'); }
+    match /orderSheets/{id} { allow read: if hasTab('order'); allow write: if canWriteTab('order'); }
+    match /orderLog/{id}    { allow read: if hasTab('order'); allow write: if canWriteTab('order'); }
+    match /invoices/{id} {
+      allow read:  if hasTab('invoices');
+      allow write: if canWriteTab('invoices');
+      match /pages/{p} { allow read: if hasTab('invoices'); allow write: if canWriteTab('invoices'); }
+    }
+
+    // Everything else is closed.
+    match /{document=**} { allow read, write: if false; }
+  }
+}
