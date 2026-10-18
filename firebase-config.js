@@ -1,9 +1,8 @@
-/* Paste your Firebase web app settings here (Firebase console > Project settings > Your apps > Web app > Config).
-   These values are NOT passwords. They identify your Firebase project; the rules in firestore.rules decide who can read or write.
-   Until the PASTE_ values are replaced, the app shows a "Setup needed" screen. */
+/* Firebase web app settings for the Ou Meul project (Firebase console > Project settings > Your apps > Web app).
+   These values are NOT passwords. They identify the Firebase project; the rules in firestore.rules decide who can read or write. */
 window.OM_FIREBASE_CONFIG = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  appId: "PASTE_APP_ID"
+  apiKey: "AIzaSyDP8xx8dH9qa3rQnI0uUTaZTD76uG3Z21c",
+  authDomain: "oumeul-cde6c.firebaseapp.com",
+  projectId: "oumeul-cde6c",
+  appId: "1:64464594687:web:973d9463a883ff78ba4eca"
 };
