@@ -4,7 +4,7 @@
 (function () {
   "use strict";
   const $ = s => document.querySelector(s);
-  const ALL_TABS = ["count", "variance", "order", "waste", "daily", "staff", "sheets", "invoices", "items"];
+  const ALL_TABS = ["count", "variance", "order", "waste", "daily", "staff", "roster", "sheets", "invoices", "items"];
   let started = false;
 
   function showOnly(id) {
@@ -157,7 +157,8 @@
           return;
         }
         appliedKey = key;
-        try { await db.doc("profiles/" + u.uid).set({ name: user.name }); } catch (e) { }
+        // Not awaited: offline, a write only finishes once the server has it, and the app must open without a connection.
+        try { db.doc("profiles/" + u.uid).set({ name: user.name }).catch(() => { }); } catch (e) { }
         startApp({ db, user, downloads: makeDownloads(), signOut: out, auth });
       }, err => { authMsg("Couldn't load your account (" + (err.code || err.message) + ").", "err"); showOnly("loginForm"); });
     });

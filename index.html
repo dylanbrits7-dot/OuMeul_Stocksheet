@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1f6b57">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ou Meul Stock">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>Ou Meul Stock</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -80,6 +86,7 @@
       <button role="tab" data-tab="waste" aria-selected="false">Waste</button>
       <button role="tab" data-tab="daily" aria-selected="false">Daily</button>
       <button role="tab" data-tab="staff" aria-selected="false">Staff</button>
+      <button role="tab" data-tab="roster" aria-selected="false">Roster</button>
       <button role="tab" data-tab="sheets" aria-selected="false">Count sheets</button>
       <button role="tab" data-tab="invoices" aria-selected="false">Invoices</button>
       <button role="tab" data-tab="items" aria-selected="false">Items</button>
@@ -87,6 +94,8 @@
     </nav>
   </div>
 </header>
+
+<div id="offlineBar" class="offlinebar" role="status" hidden>You're offline. You can keep working: changes are kept on this device and sent when the internet is back.</div>
 
 <main class="wrap">
   <div id="globalNote" hidden></div>
@@ -252,6 +261,71 @@
       <tbody id="wBody"></tbody>
     </table></div>
     <p class="muted" style="margin:0;font-size:.85rem" id="wFoot"></p>
+  </section>
+
+  <!-- ROSTER -->
+  <section class="view" id="view-roster" hidden>
+    <h2 class="print-only" id="rPrint"></h2>
+    <div class="shead">
+      <div style="min-width:0">
+        <h2 style="font-size:1.5rem;text-transform:uppercase;letter-spacing:.04em">Waiters roster</h2>
+        <p class="muted" style="margin:2px 0 0;font-size:.9rem" id="rRange"></p>
+      </div>
+      <div class="row rweek">
+        <button class="btn" id="rPrev" type="button" aria-label="Previous week">&lsaquo;</button>
+        <div class="field"><input type="date" id="rWeek" aria-label="Pick any day in the week"></div>
+        <button class="btn" id="rNext" type="button" aria-label="Next week">&rsaquo;</button>
+        <button class="btn ghost" id="rThis" type="button">This week</button>
+      </div>
+    </div>
+    <div id="rStatus" class="note info">Loading…</div>
+    <div id="rActions" class="noprint"></div>
+    <div class="tiles" id="rTiles"></div>
+    <div class="flaglist" id="rWarn" hidden></div>
+    <div class="tablewrap rgridwrap" id="rGrid"></div>
+    <p class="muted noprint" style="margin:0;font-size:.82rem">Pick a name in any spot. A name you pick by hand is locked, so Auto-balance leaves it alone (tap the padlock to lock or unlock). Names marked “· off” are off that day; names marked with a shift are already working that day.</p>
+
+    <div style="display:grid;gap:8px">
+      <h3 style="font-size:1.25rem">Shifts per waiter</h3>
+      <div class="tablewrap" id="rCounts"></div>
+      <p class="muted" style="margin:0;font-size:.82rem" id="rCountNote"></p>
+    </div>
+
+    <details class="rpanel noprint" id="rp-avail" open>
+      <summary>Days off and days that must be worked</summary>
+      <div class="rpbody">
+        <p class="muted" style="margin:0;font-size:.88rem">Tap a day to change it: <b>free</b> → <b>OFF</b> (never rostered) → <b>WORK</b> (always gets a shift) → free. Auto-balance follows these. For someone who only opens, use the Waiters panel.</p>
+        <div class="tablewrap" id="rAvail"></div>
+      </div>
+    </details>
+
+    <details class="rpanel noprint" id="rp-need">
+      <summary>Shifts needed per day</summary>
+      <div class="rpbody">
+        <p class="muted" style="margin:0;font-size:.88rem">How many waiters each day needs. The usual week is 3 open and 3 close every day, plus 1 mid and 1 host on Friday and Saturday, and 1 host on Sunday.</p>
+        <div class="tablewrap" id="rNeeds"></div>
+        <div class="row"><button class="btn" id="rNeedReset" type="button">Back to the usual numbers</button></div>
+      </div>
+    </details>
+
+    <details class="rpanel noprint" id="rp-waiters">
+      <summary>Waiters and wage estimate</summary>
+      <div class="rpbody">
+        <p class="muted" style="margin:0;font-size:.88rem">Untick “On the list” for someone who has left or is on leave (their old rosters are kept). Nigel and Calvin are here for special days: tick them on when needed. “Only works” keeps a person on one kind of shift, for example a manager who always opens.</p>
+        <div class="tablewrap" id="rWaiters"></div>
+        <div class="row" id="rAddWrap">
+          <div class="field" style="flex:1 1 200px;max-width:280px"><label for="rAddName">Add a waiter</label><input id="rAddName" type="text" maxlength="30" autocomplete="off" placeholder="Name"></div>
+          <button class="btn" id="rAddBtn" type="button" style="align-self:end">Add</button>
+        </div>
+        <div class="grid2" id="rPay">
+          <div class="field"><label for="rPayRate">Rate per hour (R)</label><input id="rPayRate" data-pf="rate" type="number" inputmode="decimal" min="0" step="0.01"></div>
+          <div class="field"><label for="rPayHours">Hours per shift</label><input id="rPayHours" data-pf="hours" type="number" inputmode="decimal" min="0" step="0.5"></div>
+          <div class="field"><label for="rPaySun">Sunday multiplier</label><input id="rPaySun" data-pf="sundayX" type="number" inputmode="decimal" min="1" step="0.1"></div>
+          <label class="check" style="align-self:end"><input type="checkbox" data-pf="hostPaid"> Count host shifts in the estimate</label>
+        </div>
+        <p class="muted" style="margin:0;font-size:.82rem">The wage estimate is only a guide for planning: shifts × hours × rate, Sundays at the multiplier. Set the rate to 0 to hide it.</p>
+      </div>
+    </details>
   </section>
 
   <!-- SHEETS -->
@@ -521,8 +595,11 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
+<script src="js/roster-engine.js"></script>
+<script src="js/roster.js"></script>
 <script src="js/app.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/backend.js"></script>
+<script src="js/offline.js"></script>
 </body>
 </html>

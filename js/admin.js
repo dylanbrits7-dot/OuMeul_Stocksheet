@@ -6,25 +6,25 @@
 
   const TABS = [
     ["count", "Count"], ["variance", "Variance"], ["order", "Order"], ["waste", "Waste"], ["daily", "Daily"],
-    ["staff", "Staff"], ["sheets", "Count sheets"], ["invoices", "Invoices"], ["items", "Items"]
+    ["staff", "Staff"], ["roster", "Roster"], ["sheets", "Count sheets"], ["invoices", "Invoices"], ["items", "Items"]
   ];
   const PRESETS = [
     ["", "Set to…"],
     ["counter", "Counter: count only"],
     ["stockroom", "Stock room: count, count sheets, waste"],
-    ["manager", "Manager: everything except Daily & Staff"],
+    ["manager", "Manager: everything except Daily & Staff (includes Roster)"],
     ["all", "All tabs"],
     ["none", "No tabs"]
   ];
   const PRESET_TABS = {
     counter: ["count"],
     stockroom: ["count", "sheets", "waste"],
-    manager: ["count", "variance", "order", "waste", "sheets", "invoices", "items"],
+    manager: ["count", "variance", "order", "waste", "roster", "sheets", "invoices", "items"],
     all: TABS.map(t => t[0]),
     none: []
   };
   // Collections included in a backup / accepted by import. Subcollections (drafts, invoice photo pages) are not included.
-  const COLLECTIONS = ["items", "lists", "settings", "sessions", "waste", "daily", "staff", "shifts", "orderSheets", "orderLog", "invoices"];
+  const COLLECTIONS = ["items", "lists", "settings", "sessions", "waste", "daily", "staff", "shifts", "rosters", "orderSheets", "orderLog", "invoices"];
 
   let B = null, users = [], armed = null, importPlan = null;
 

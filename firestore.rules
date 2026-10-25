@@ -58,6 +58,9 @@ service cloud.firestore {
     match /daily/{id}    { allow read: if hasAny(['daily','staff','waste']); allow write: if canWriteTab('daily'); }
     match /staff/{id}    { allow read: if hasTab('staff'); allow write: if canWriteTab('staff'); }
     match /shifts/{id}   { allow read: if hasTab('staff'); allow write: if canWriteTab('staff'); }
+    // The waiters' weekly roster and its settings (waiter list, wage estimate): only people with the Roster tab.
+    match /rosters/{id}  { allow read: if hasTab('roster'); allow write: if canWriteTab('roster'); }
+    match /settings/roster { allow read: if hasTab('roster'); allow write: if canWriteTab('roster'); }
     match /orderSheets/{id} { allow read: if hasTab('order'); allow write: if canWriteTab('order'); }
     match /orderLog/{id}    { allow read: if hasTab('order'); allow write: if canWriteTab('order'); }
     match /invoices/{id} {

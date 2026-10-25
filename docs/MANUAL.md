@@ -19,7 +19,7 @@ Open the **Team** tab (only owners see it). Every person who signed up appears t
 | **Approved** | Tick to let the person in. Untick to lock them out. |
 | **Tabs they can use** | Tick only the tabs that person needs. Everything else is hidden from them — and the database refuses to give them that data even if they try. |
 | **View only** | They can look but not change anything. |
-| **Quick set** | Counter (Count only) · Stock room (Count, Count sheets, Waste) · Manager (everything except Daily & Staff) · All tabs · No tabs |
+| **Quick set** | Counter (Count only) · Stock room (Count, Count sheets, Waste) · Manager (everything except Daily & Staff, includes Roster) · All tabs · No tabs |
 | **Remove** | Tap twice. Takes away their access. |
 
 Changes save straight away and apply the next time that person opens the app.
@@ -36,6 +36,7 @@ Changes save straight away and apply the next time that person opens the app.
 | **Waste** | Log spoilage / breakages; tick "also booked in GAAP" if it was already adjusted there. |
 | **Daily** | Daily management overview (takings, sales, etc.) imported from GAAP. |
 | **Staff** | Staff hours and shifts. Pay rates live here only. |
+| **Roster** | The waiters' weekly shifts: auto-balanced, shift counts per waiter, print / Excel / WhatsApp. Works without internet. |
 | **Count sheets** | Printable count sheets by location, category or in GAAP order. |
 | **Invoices** | Capture supplier invoices (photos + details) and match prices. |
 | **Items** | The stock list: codes, names, unit, cost, GAAP quantity, location. |
@@ -43,7 +44,7 @@ Changes save straight away and apply the next time that person opens the app.
 
 ## 4. Weekly stocktake (every Monday)
 
-1. **In GAAP:** export *Stock on hand*. Save it in `02_Stocktakes/<year>/<year>-<month>/` (see section 7).
+1. **In GAAP:** export *Stock on hand*. Save it in `02_Stocktakes/<year>/<year>-<month>/` (see section 8).
 2. **Items tab:** import the GAAP export so each item has its GAAP quantity.
 3. **Count tab → New stocktake.** Choose *full* (or a partial count), give it a name, create.
 4. Each counter picks their **location** (Kitchen, Store room shelves, Store room fridges, Shop, Front counter, Bar) and types in counts. Leave **Show GAAP qty** switched **off** so counts stay blind.
@@ -57,14 +58,38 @@ Printed count sheets: **Count sheets** tab → choose location / category / GAAP
 
 **Order** tab → pick the supplier sheet (Food store, Bootlegger, …). Set each item's **minimum** and **target**; the app suggests quantity = target − on hand when stock is at or below the minimum. Orders you place are logged. Keep the supplier's own price list/PDF in `04_Orders/<Supplier>/`.
 
-## 6. Month end
+## 6. Waiters' roster
+
+Open the **Roster** tab (the owner gives it to whoever plans the week in **Team**; the *Manager* quick set includes it).
+
+**Plan a week**
+1. Pick the week with the arrows or the date box. From Friday the app opens next week, because that's the one you're planning.
+2. Under **Days off and days that must be worked**, tap a day to change it: *free* → **OFF** (never rostered that day) → **WORK** (always gets a shift that day) → free. The *Set row…* box does a whole week at once.
+3. Press **Auto-balance**. Everyone gets about the same number of shifts, Monday to Thursday and the weekend are shared evenly, early and late shifts are shared, and nobody closes one night and opens the next morning. It follows last week's roster so people don't get the same shift on the same day two weeks running.
+4. Check **Shifts per waiter** (open / mid / close / host counts, Monday–Thursday vs Friday–Sunday, which shift each day, and a wage estimate).
+5. Anything in red under **Things to check** needs a decision, for example someone on a day they are marked off.
+
+**Change it by hand**
+- Pick a name in any spot. A name you pick is **locked** (padlock), so Auto-balance won't move it. Tap the padlock to lock or unlock.
+- **Fill empty spots** keeps everyone already placed and fills only the gaps. **Shuffle** gives another fair arrangement. **Copy last week** starts from last week's names. **Clear unlocked** and **Clear all** need a second tap.
+- **Shifts needed per day** changes how many waiters a day needs (usual: 3 open and 3 close daily; Friday and Saturday add 1 mid and 1 host; Sunday adds 1 host).
+- **Waiters and wage estimate**: add new staff, untick *On the list* for someone who left or is on leave (old rosters are kept), tick *Can host*, and set *Only works* for someone who always opens or always closes (for example a manager). Nigel and Calvin are listed but switched off, for special days. The rate (R30.33 × 8 hours, Sunday ×1.5, host not counted) matches the old Excel and is only a planning guide.
+
+**Share it**
+- **Print** prints the roster and the shift counts on one page (no wages).
+- **Excel** downloads the roster and the shift counts.
+- **Copy for WhatsApp** copies a text version to paste into the group.
+
+**Without internet**: the app opens and the roster can be changed, balanced and printed with no signal. Changes are kept on the device and uploaded by themselves when the internet is back (the bar at the top of the roster says "Saved on this device" until then). Open the app once with internet on each phone first, so it can save itself. If two people change the same week while offline, the last one to reconnect wins, so plan one roster on one device.
+
+## 7. Month end
 
 1. Do the last stocktake of the month and finalise it.
 2. Download a **backup** (Team tab → *Download backup*) → `10_Backups`.
-3. Put the month's GAAP exports, invoices and orders in their folders (section 7).
-4. Optional: have Claude (on Dylan's own computer) prepare the monthly import file — section 8 — and import it in Team → *Import data*.
+3. Put the month's GAAP exports, invoices and orders in their folders (section 8).
+4. Optional: have Claude (on Dylan's own computer) prepare the monthly import file — section 9 — and import it in Team → *Import data*.
 
-## 7. The data folder (on Dylan's PC)
+## 8. The data folder (on Dylan's PC)
 
 Create one folder, for example `Documents\OuMeul-Data`, and connect **that folder** to Dylan's local Claude. A ready-made structure with a CLAUDE.md that explains it to Claude is in the project under `data-folder-template/` — copy it as `OuMeul-Data`.
 
@@ -96,7 +121,7 @@ OuMeul-Data/
 
 **Naming rules:** dates as `YYYY-MM-DD`, months as `YYYY-MM`, no spaces at the start, supplier names consistent (`Bootlegger`, `Food-Store`).
 
-## 8. Monthly import with your own Claude
+## 9. Monthly import with your own Claude
 
 You don't need to pay Claude to *run* the app. Claude is only useful once a month to turn the raw files into the app's import format. With the data folder connected to Claude on Dylan's PC, paste a prompt like:
 
@@ -109,12 +134,12 @@ Import file formats the app accepts:
 - `{ "collection": "daily", "docs": [ { "date": "2026-10-01", ... } ] }`,
 - or a plain list, with the collection chosen from the dropdown.
 
-## 9. Backups
+## 10. Backups
 
 - **Team → Download backup** produces `ou-meul-backup-YYYY-MM-DD.json` (everything except invoice photos). Do it weekly after the count, and always at month end. Keep in `10_Backups`.
 - **Restore:** Team → Import data → choose the backup → Import.
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
 | Problem | Fix |
 |---|---|
@@ -125,4 +150,4 @@ Import file formats the app accepts:
 | "resource-exhausted" / "quota" | The free daily limit of the database was hit. Wait until the next day (resets at midnight Pacific ≈ 09:00 SA time) or ask Brad about the paid plan. |
 | Page looks old after an update | Refresh the page (pull down on a phone); sign out and in if needed. |
 | Forgot password | Sign-in page → Forgot password. |
-| Works offline? | The app remembers recent data and keeps working briefly offline; changes sync when back online. Don't rely on it for long periods. |
+| Works offline? | The app opens with no signal (once it has been opened online on that device) and keeps recent data. The Roster can be planned fully offline; it uploads when the internet returns. Stocktake counts and other saves need the connection to confirm, so check for "Saved" when you're back online. |

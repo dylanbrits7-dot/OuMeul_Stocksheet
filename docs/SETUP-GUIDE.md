@@ -57,20 +57,20 @@ Time: about 45 minutes. Cost: R0 on the free plans (limits in section 8).
 Brad's source files are in `source-files/` and `source-chats/` (stock list in `stock/stocktake.xlsx`, GAAP exports, rosters, etc.).
 
 - Items: in the app, Items tab → import the GAAP stock-on-hand export (see the Items tab's import).
-- If you prepare a JSON file, use Team → Import data (formats in MANUAL.md section 8).
+- If you prepare a JSON file, use Team → Import data (formats in MANUAL.md section 9).
 - **Existing data in the old Claude-hosted draft is not migrated automatically.** If Dylan wants it, open the old draft once he has Claude access, and export it; otherwise re-import from GAAP.
 
 ## 5. Data folder + Claude on Dylan's PC
 
 1. Copy `data-folder-template` to `Documents\OuMeul-Data` on Dylan's PC (rename it).
-2. In his Claude desktop app, connect that folder. The `CLAUDE.md` inside tells Claude the layout. Monthly workflow: MANUAL.md section 8.
+2. In his Claude desktop app, connect that folder. The `CLAUDE.md` inside tells Claude the layout. Monthly workflow: MANUAL.md section 9.
 3. Move his historic files in using the numbered folders (`source-files/` has a suggested mapping: rosters → `05_Rosters`, floor-plan → `06_Floor-Plan`, checklists → `07_Checklists`, orders → `04_Orders`, stock → `02_Stocktakes`).
 
 ## 6. Add the shortcut for staff
 On each phone: open the site → browser menu → **Add to Home screen**.
 
 ## 7. Updating the app later
-Change the files → push/upload to GitHub → refresh (Pages redeploys in about a minute). If the rules changed, paste the new `firestore.rules` into Firebase → Rules → Publish.
+Change the files → push/upload to GitHub → refresh (Pages redeploys in about a minute). If the rules changed, paste the new `firestore.rules` into Firebase → Rules → Publish. The **Roster** tab needs this: the rules add `rosters` and `settings/roster`. Then, in the Team tab, tick **Roster** for the people who plan the roster (owners always have it).
 
 ## 8. Limits and costs (free "Spark" plan, checked at the time of writing — confirm in the console)
 - Firestore: about 50,000 reads and 20,000 writes per day, 1 GiB stored. A normal restaurant day is far below this. The app only listens to what each person's tabs need.

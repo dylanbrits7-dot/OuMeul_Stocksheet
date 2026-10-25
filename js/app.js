@@ -1780,6 +1780,7 @@ function renderAll(){
   else if(tab==="waste")renderWaste();
   else if(tab==="daily")renderDaily();
   else if(tab==="staff")renderStaff();
+  else if(tab==="roster"){window.OM_ROSTER&&window.OM_ROSTER.render()}
   else if(tab==="invoices"){renderInvoices();renderThumbs();$("#capPanel").hidden=!canWrite}
   else if(tab==="team"){window.OM_ADMIN&&window.OM_ADMIN.render&&window.OM_ADMIN.render()}
   else renderItems();
@@ -1837,6 +1838,7 @@ window.OM_START=function(backend){
     staff=snap.docs.map(d=>({...d.data(),id:d.id}));
     if(tab==="staff")renderStaff();
   },e=>note("Staff list stopped updating ("+e.code+"). Reload the page.","err"));
+  if(has("roster")&&window.OM_ROSTER)window.OM_ROSTER.init(backend,{toast,writeErr,offerXlsx});
   if(has("staff"))db.collection("shifts").orderBy("date","desc").limit(1000).onSnapshot(snap=>{
     shifts=snap.docs.map(d=>({...d.data(),id:d.id}));
     if(tab==="staff")renderStaff();

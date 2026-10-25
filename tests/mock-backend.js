@@ -7,6 +7,8 @@
   const subs = [];             // active listeners
   const listened = [];
   const writes = [];
+  const state = { offline: false };  // OM_MOCK.goOffline(): writes apply on screen but stay "pending" and never finish, like Firestore with no connection
+  const pending = new Set(), held = [];
   const clone = o => JSON.parse(JSON.stringify(o));
 
   const coll = p => store[p] || (store[p] = new Map());
@@ -24,8 +26,8 @@
       });
     }
     if (lim) docs = docs.slice(0, lim);
-    const out = docs.map(({ id, d }) => ({ id, exists: true, data: () => clone(d) }));
-    return { docs: out, size: out.length, empty: !out.length, docChanges: () => out.map(x => ({ type: "modified", doc: x })) };
+    const out = docs.map(({ id, d }) => ({ id, exists: true, data: () => clone(d), metadata: { hasPendingWrites: pending.has(path + "/" + id), fromCache: state.offline } }));
+    return { docs: out, size: out.length, empty: !out.length, metadata: { hasPendingWrites: out.some(x => x.metadata.hasPendingWrites), fromCache: state.offline }, docChanges: () => out.map(x => ({ type: "modified", doc: x })) };
   }
 
   function query(path, order, lim) {
@@ -33,7 +35,8 @@
       orderBy: (f, dir) => query(path, { f, dir: dir || "asc" }, lim),
       limit: n => query(path, order, n),
       get: async () => snapOf(path, order, lim),
-      onSnapshot: (cb, err) => {
+      onSnapshot: (a, b) => {
+        const cb = typeof a === "function" ? a : b;
         listened.push(path);
         const s = { fire: () => Promise.resolve().then(() => cb(snapOf(path, order, lim))) };
         subs.push(s); s.fire();
@@ -46,18 +49,25 @@
 
   function docRef(path) {
     const [cp, id] = split(path);
-    const snap = () => { const d = coll(cp).get(id); return { id, exists: !!d, data: () => d ? clone(d) : undefined }; };
+    const snap = () => { const d = coll(cp).get(id); return { id, exists: !!d, data: () => d ? clone(d) : undefined, metadata: { hasPendingWrites: pending.has(path), fromCache: state.offline } }; };
+    // Apply at once and tell listeners. Offline, the returned promise stays open until goOnline().
+    const done = () => {
+      if (!state.offline) { pending.delete(path); notify(); return Promise.resolve(); }
+      pending.add(path); notify();
+      return new Promise(res => held.push(() => { pending.delete(path); res(); }));
+    };
     return {
       id,
       get: async () => snap(),
-      set: async (data, opts) => { writes.push(["set", path]); const cur = coll(cp).get(id); coll(cp).set(id, opts && opts.merge && cur ? { ...cur, ...clone(data) } : clone(data)); notify(); },
-      update: async (data) => {
+      set: (data, opts) => { writes.push(["set", path]); const cur = coll(cp).get(id); coll(cp).set(id, opts && opts.merge && cur ? { ...cur, ...clone(data) } : clone(data)); return done(); },
+      update: (data) => {
         writes.push(["update", path]);
-        const cur = coll(cp).get(id); if (!cur) throw Object.assign(new Error("not found"), { code: "not-found" });
-        coll(cp).set(id, { ...cur, ...clone(data) }); notify();
+        const cur = coll(cp).get(id); if (!cur) return Promise.reject(Object.assign(new Error("not found"), { code: "not-found" }));
+        coll(cp).set(id, { ...cur, ...clone(data) }); return done();
       },
-      delete: async () => { writes.push(["delete", path]); coll(cp).delete(id); notify(); },
-      onSnapshot: (cb) => {
+      delete: () => { writes.push(["delete", path]); coll(cp).delete(id); return done(); },
+      onSnapshot: (a, b) => {
+        const cb = typeof a === "function" ? a : b;
         listened.push(path);
         const s = { fire: () => Promise.resolve().then(() => cb(snap())) };
         subs.push(s); s.fire();
@@ -76,11 +86,13 @@
   };
 
   window.OM_MOCK = {
-    store, writes, listened, db,
+    store, writes, listened, db, state,
+    goOffline() { state.offline = true; notify(); },
+    goOnline() { state.offline = false; held.splice(0).forEach(f => f()); notify(); },
     make({ role = "owner", tabs = [], readOnly = false, seed = {}, name = "Test Person" }) {
       Object.entries(seed).forEach(([c, docs]) => { Object.entries(docs).forEach(([id, d]) => coll(c).set(id, clone(d))); });
       const owner = role === "owner";
-      const all = ["count", "variance", "order", "waste", "daily", "staff", "sheets", "invoices", "items"];
+      const all = ["count", "variance", "order", "waste", "daily", "staff", "roster", "sheets", "invoices", "items"];
       const saved = [];
       return {
         db,

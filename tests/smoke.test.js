@@ -63,7 +63,7 @@ async function newPage(browser, backendScript) {
     await page.waitForSelector("#appRoot:not([hidden])");
     ok(await page.isHidden("#authScreen"), "owner: app opens, sign-in screen hidden");
     const tabNames = await page.$$eval(".tabs button:not([hidden])", bs => bs.map(b => b.dataset.tab));
-    ok(tabNames.length === 10 && tabNames.includes("team"), "owner sees all 9 tabs plus Team: " + tabNames.join(","));
+    ok(tabNames.length === 11 && tabNames.includes("team") && tabNames.includes("roster"), "owner sees all 10 tabs plus Team: " + tabNames.join(","));
     ok((await page.textContent("#whoName")) === "Dylan", "shows who is signed in");
 
     // start a stocktake and count an item
@@ -83,7 +83,7 @@ async function newPage(browser, backendScript) {
     }
 
     // visit every tab
-    for (const t of ["variance", "order", "waste", "daily", "staff", "sheets", "invoices", "items", "team", "count"]) {
+    for (const t of ["variance", "order", "waste", "daily", "staff", "roster", "sheets", "invoices", "items", "team", "count"]) {
       await page.click(`.tabs button[data-tab="${t}"]`);
       await page.waitForTimeout(150);
       const shown = await page.$eval("#view-" + t, el => !el.hidden);
